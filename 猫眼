@@ -1,0 +1,55 @@
+import requests
+import re
+import json
+
+
+def get_one_page(url):
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36'}
+    # 不定制请求头将无法获取信息，因为被认为是机器操作。
+    response = requests.get(url, headers=headers)
+    # 网页的状态码不是str类型
+    if response.status_code == 200:
+        return response.text
+    # return None
+
+
+def get_movie(html):
+    pattern = re.compile(
+        r'board-index.*?(\d+)</i>.*?<img data-src="(.*?)".*?" title="(.*?)".*?主演：(.*?)</p>.*?releasetime">(.*?)</p> ',
+        re.S)
+    result = pattern.findall(html)
+    for i in result:
+        # 将遍历过程变成生成器，需要一个拿一个，而不是一次拿出来，yield后面一定要紧跟生成的内容而不能换行。
+        yield {'index': i[0], 'image': i[1],
+               'title': i[2], 'actor': i[3].strip(),
+               'time': i[-1]}
+
+
+def write_to_file(content):
+    with open('test.txt', 'a', encoding='utf-8') as f:
+        # If ensure_ascii is false, incoming characters will be output as-is.
+        f.write(json.dumps(content, ensure_ascii=False) + '\n')
+
+
+def main():
+    url = 'http://maoyan.com/board/4'
+    for i in get_total_page_url(10):
+        #print(i)
+        html = get_one_page(i)
+        # print(html)
+        # print(type(get_movie(html)))
+        for i in get_movie(html):
+            print(i)
+            write_to_file(i)
+
+
+def get_total_page_url(number):
+    for i in range(number):
+        #为什么用最下面的会出错？
+        yield 'http://maoyan.com/board/4' + '?offset={0}'.format(10*i)
+        #yield 'http://maoyan.com/board/4' + '?offset%s'%10*i
+
+
+if __name__ == '__main__':
+    main()
